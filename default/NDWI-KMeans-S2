@@ -1,0 +1,23 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var image = ee.Image("users/sat-io/NDWI_Grid_S2/Grid4_MNDWI_MB"),
+    geometry = /* color: #d63000 */ee.Geometry.Polygon(
+        [[[-90.02315309072253, 29.561250464527944],
+          [-90.02178325282597, 29.40132984653637],
+          [-89.82093736431335, 29.39953825664204],
+          [-89.82093849707684, 29.5618467034466]]]),
+    image2 = ee.Image("users/sat-io/NDWI_Grid_S2/Grid5_MNDWI_MB");
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+var input83=image2.select('MNDWI_2017_3_1')
+var training16 = image2.select('MNDWI_2017_3_1').sample({
+    region: geometry,
+    scale: 10,
+    numPixels: 50000})
+var clusterer83 = ee.Clusterer.wekaKMeans(2).train(training16);
+print(clusterer83)
+
+var result83 = input83.cluster(clusterer83);
+Map.addLayer(result83)
+
+var m83 = result83.eq(1);//.and(result.eq(3)).and(result.eq(4));//Using Clustering instead of OTSU
+var m83 = m83.updateMask(m83).connectedPixelCount(64, false).eq(64)
+Map.addLayer(m83)

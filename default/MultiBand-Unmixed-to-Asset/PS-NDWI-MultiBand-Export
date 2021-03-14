@@ -1,0 +1,63 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var table = ee.FeatureCollection("users/samapriya/vector/la-subset");
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+//==============================================================================================*/
+var aoi=table.filterMetadata('Grids','equals',"Grid_6").geometry().bounds()
+var farea=aoi.area(0.001)
+Map.centerObject(aoi,11)
+
+var lcclear = ee.ImageCollection('users/samapriya/Planet/PS4BSR')
+.filterBounds(aoi).filterDate('2016','2019');
+    
+
+
+//Import Filtering and Composite Creation Modules[Only Doug and Jeff have access]
+var med = require('users/samapriya/modules:filters-composites');
+
+var perc=med.mediancomposite(ee.ImageCollection(lcclear),'2017-01-01', 11, 2, 'month')
+
+print('PS Image Collections',perc)
+
+//Calculate NDWI PlanetScope
+var addNDWI = function(image) {
+  var bandsize=ee.Image(image).bandNames().size()
+  var ndwi = image.normalizedDifference(['b2', 'b4']).rename('NDWI');
+  return ndwi.copyProperties(image)
+  .set('bsize',ee.Number(bandsize))
+  .set('year',ee.Date(image.get('system:time_start')).get('year'))
+  .set('month',ee.Date(image.get('system:time_start')).get('month'))
+  .set('day',ee.Date(image.get('system:time_start')).get('day'))
+  .set('date',ee.Date(image.get('system:time_start')))
+};
+
+var indexndwi=perc.map(addNDWI)
+
+//Check for Overlap
+var med2=require('users/samapriya/modules:overlap')
+var ov_bright=med2.overlapbn(ee.ImageCollection(indexndwi),aoi,ee.Number(farea),3)
+print(ov_bright)
+var ov_filter=ov_bright.filterMetadata('overlap','greater_than',1.14)
+Map.addLayer(ee.Image(ov_filter.first()).clip(aoi))
+function appendBand(current, previous){
+  // Build a name for the band
+  var bandName = ee.Algorithms.String(current.bandNames().get(0)).cat('_').cat(current.get('year'))
+  .cat('_').cat(current.get('month')).cat('_').cat(current.get('day'))
+  // Rename the band
+  current = current.select([0],[bandName])
+  // Append it to the result (Note: only return current item on first element/iteration)
+  var accum = ee.Algorithms.If(ee.Algorithms.IsEqual(previous,null), current, current.addBands(ee.Image(previous)))
+  // Return the accumulation
+  return accum
+}
+
+var res = ov_filter.iterate(appendBand)
+print(res)
+Map.addLayer(ee.Image(res).clip(aoi))
+Export.image.toAsset({
+  image: res,
+  description: 'NDWI_G6',
+  assetId: 'NDWI_Grid_PS/Grid6_NDWI_MB',
+  scale: 3,
+  region: aoi,
+  maxPixels: 10e12
+});

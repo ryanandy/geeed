@@ -1,0 +1,27 @@
+//Add AOI and add Image Collection
+var collection=ee.ImageCollection('projects/sat-io/open-ca/ps4bsr')
+var aoi=ee.FeatureCollection("projects/sat-io/open-ca/aoi")
+
+//Center at the AOI
+Map.centerObject(aoi,14)
+
+//Get Collection Size
+print(collection.size())
+
+//Inspect a single image and metadata
+print(collection.first())
+
+//Add visualization
+var vis = {"opacity":1,"bands":["b4","b3","b2"],"min":608.6288888888889,"max":2665.4822222222224,"gamma":1.856};
+
+//Clip and Add an Image
+Map.addLayer(collection.median().clip(aoi),vis,'Median PS4B SR',false)
+
+//Create Monthly Frequency Histogram
+var collection = ee.ImageCollection('projects/sat-io/open-ca/ps4bsr')
+    .map(function(img) {
+      var date = ee.Date(img.get('system:time_start'))
+      return img.set('month', date.get("month"));
+    })
+
+print(Chart.feature.histogram(collection, "month"))

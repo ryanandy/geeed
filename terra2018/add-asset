@@ -1,0 +1,10 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var table = ee.FeatureCollection("projects/sat-io/terra2018/vector/aoi"),
+    imageCollection = ee.ImageCollection("projects/sat-io/terra2018/reo"),
+    imageCollection2 = ee.ImageCollection("projects/sat-io/terra2018/ps4bsr"),
+    psvis = {"opacity":1,"bands":["b4","b3","b2"],"min":712,"max":2789.5,"gamma":1},
+    revis = {"opacity":1,"bands":["b5","b3","b2"],"min":1192,"max":10192,"gamma":1};
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+Map.centerObject(table,14)
+Map.addLayer(imageCollection2.median(),psvis,'PlanetScope')
+Map.addLayer(imageCollection.median(),revis,'RapidEye')

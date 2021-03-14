@@ -1,0 +1,10 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var imageCollection = ee.ImageCollection("projects/sat-io/PlanetScope"),
+    vis = {"opacity":1,"bands":["b4","b3","b2"],"min":897.7586355781041,"max":8693.227927896045,"gamma":1},
+    re = ee.ImageCollection("projects/sat-io/RapidEye");
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+print("PlanetScope Collection size: ",imageCollection.size())
+print("RapidEye Collection size: ",re.size())
+print("CloudCover less than 10%",imageCollection.filterMetadata('cloudcover','less_than',0.10).size())
+Map.addLayer(imageCollection.median(),vis,"PlanetScope NC",false)
+Map.centerObject(imageCollection,11)

@@ -1,0 +1,45 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var l8sr = ee.ImageCollection("LANDSAT/LC08/C01/T1_SR"),
+    l8toa = ee.ImageCollection("LANDSAT/LC08/C01/T1_TOA"),
+    geometry = /* color: #d63000 */ee.Geometry.Polygon(
+        [[[-56.57958984375, -6.227933930268673],
+          [-56.513671875, -8.407168163601074],
+          [-54.228515625, -8.407168163601074],
+          [-54.25048828125, -6.0968598188879355]]]);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+var wrs=ee.FeatureCollection('ft:1_RZgjlcqixp-L9hyS6NYGqLaKOlnhSC35AB5M5Ll')
+.filterMetadata('PATH','equals',227).filterMetadata('ROW','equals',65)
+Map.addLayer(wrs)
+//Filtering an Image Collection
+var filtered=l8sr.filterMetadata('WRS_PATH','equals',227)
+.filterMetadata('WRS_ROW','equals',65).filterMetadata('CLOUD_COVER','less_than',50)
+var filtered2=l8toa.filterMetadata('WRS_PATH','equals',227)
+.filterMetadata('WRS_ROW','equals',65).filterMetadata('CLOUD_COVER','less_than',50)
+
+print("Filtered SR Collection",filtered.sort('system:time_start').first())
+print("Filtered TOA Collection",filtered2.sort('system:time_start').first())
+
+var img=ee.Image('LANDSAT/LC08/C01/T1_SR/LC08_227065_20130520')
+print(ee.String(img.getInfo()['id']).slice(23,43))
+Map.addLayer(ee.Image(ee.ImageCollection(filtered).first()))
+Map.addLayer(ee.Image(ee.ImageCollection(filtered2).first()))
+
+Export.image.toDrive({
+  image:ee.Image(ee.ImageCollection(filtered).first())
+  .select(['pixel_qa']).toUint16(),
+  description: ee.String(ee.Image(ee.ImageCollection(filtered).first()).getInfo()['id']).slice(23,43).getInfo(),
+  folder: 'CloudMask',
+  scale:30,
+  region: geometry,
+  maxPixels:10e12
+})
+
+Export.image.toDrive({
+  image:ee.Image(ee.ImageCollection(filtered2).first())
+  .select(['B1','B2','B3','B4','B5','B6','B7','B8','B9','B10','B11']).float(),
+  description: ee.String(ee.Image(ee.ImageCollection(filtered2).first()).getInfo()['id']).slice(24,44).getInfo(),
+  folder: 'BaseImage',
+  scale:30,
+  region: geometry,
+  maxPixels:10e12
+})

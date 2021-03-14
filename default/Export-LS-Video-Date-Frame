@@ -1,0 +1,100 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var vis = {"opacity":1,"bands":["b4","b3","b2"],"min":1070,"max":3718,"gamma":1},
+    imageCollection = ee.ImageCollection("LANDSAT/LT05/C01/T1_SR"),
+    imageVisParam = {"opacity":1,"bands":["B5","B4","B3"],"min":54.5,"max":3550,"gamma":1},
+    geometry = 
+    /* color: #d63000 */
+    /* shown: false */
+    /* displayProperties: [
+      {
+        "type": "rectangle"
+      }
+    ] */
+    ee.Geometry.Polygon(
+        [[[-66.61491259670527, -11.373710970828498],
+          [-66.61491259670527, -11.474667172726045],
+          [-66.4851365957287, -11.474667172726045],
+          [-66.4851365957287, -11.373710970828498]]], null, false);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+/*
+Copyright (c) 2020 Samapriya Roy. All rights reserved.
+
+This work is licensed under the terms of the MIT license.  
+For a copy, see <https://opensource.org/licenses/MIT>.
+*/
+
+/***
+Last updated: 2020-01-28 by Samapriya Roy
+To create a different area, just delete the geometry import at the top and draw a new geometry anywhere in the world
+***/
+
+//Get geometry bounds to make it regular
+var bounds=geometry.bounds()
+Map.centerObject(bounds, 11)
+
+//We will use Genna's script for text annotation
+var palettes = require('users/gena/packages:colorbrewer').Palettes;
+var utils = require('users/gena/packages:utils')
+var text = require('users/gena/packages:text')
+
+//Importing Landsat Surface Reflectance & merge all of them together 
+var l5=ee.ImageCollection('LANDSAT/LT05/C01/T1_SR').filterBounds(geometry).sort('DATE_ACQUIRED').select(["B1", "B2", "B3", "B4", "B5", "B7",'pixel_qa'],["B1", "B2", "B3", "B4", "B5", "B7",'pixel_qa']).filterMetadata('CLOUD_COVER','less_than',30);
+var l7=ee.ImageCollection('LANDSAT/LE07/C01/T1_SR').filterBounds(geometry).sort('DATE_ACQUIRED').select(["B1", "B2", "B3", "B4", "B5", "B7",'pixel_qa'],["B1", "B2", "B3", "B4", "B5", "B7",'pixel_qa']).filterMetadata('CLOUD_COVER','less_than',30);
+var l8=ee.ImageCollection('LANDSAT/LC08/C01/T1_SR').filterBounds(geometry).sort('DATE_ACQUIRED').select(['B2', 'B3', 'B4', 'B5', 'B6', 'B7','pixel_qa'],["B1", "B2", "B3", "B4", "B5", "B7",'pixel_qa']).filterMetadata('CLOUD_COVER','less_than',30);
+var lc=l5.merge(l8).merge(l7)
+
+//Get yearly cloud free median images from collections
+var years = ee.List.sequence(1986, 2019)
+
+var images = ee.ImageCollection(years
+  .map(function(y) {
+    var start = ee.Date.fromYMD(y, 1, 1)
+    var end = start.advance(1, 'year');
+    var image = ee.ImageCollection(lc).filterDate(start, end).median();
+    return image.set('year', y).set('system:time_start',start)
+    .set('system:time_end',end)
+}))
+print('Yearly image collections',images)
+
+//Sort yearly collection by year
+var yearly = ee.ImageCollection(images).sort('system:time_start')
+
+//make the data 8-bit which is necessary for making a video
+var image_video =  yearly.map(function(image){
+  var start = ee.Date(image.get('system:time_start'))
+  var label = start.format('YYYY-MM-dd')
+  
+  return image.visualize({
+    forceRgbOutput: false,
+    bands: ["B5","B4","B3"],
+    gamma: 1,
+    max: 3500,
+    min: 54,
+opacity: 1
+    //palette: palettes.BrBG[9], //original palette was "000000", "fdbb84"
+  }).clip(bounds).set({label: label});
+});
+
+// annotate
+var annotations = [
+  {
+    position: 'left', offset: '1%', margin: '1%', property: 'label', scale: Map.getScale() * 2
+  }
+]
+
+image_video = image_video.map(function(image) {
+  return text.annotateImage(image, {}, bounds, annotations)
+})
+  
+  
+// add first layer to map
+Map.addLayer(ee.Image(ee.ImageCollection(image_video).first()))
+
+//Export yearly collection from whole study area to video
+Export.video.toDrive({
+  collection: image_video,
+  description: "Folder-Name", //Give any folder name you want to save the videos
+  dimensions: 1080, //Resolution 1080 is full hd resolution but note it depends on the AOI size
+  framesPerSecond: 5, //means 3 years/second
+  region: bounds  // overall region
+  });

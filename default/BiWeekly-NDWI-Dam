@@ -1,0 +1,80 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var imageCollection = ee.ImageCollection("projects/sat-io/planet-water/ps4b"),
+    geometry = /* color: #d63000 */ee.Geometry.Polygon(
+        [[[19.152603146794718, -33.998601922768735],
+          [19.153976437810343, -34.082811242267695],
+          [19.29885863995878, -34.082242540986435],
+          [19.297485348943155, -33.999171185155376]]]),
+    vis = {"opacity":1,"bands":["NDWI"],"min":-0.49777777777777776,"max":0.3789954337899543,"gamma":1};
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+Map.centerObject(geometry,12)
+
+//Import Filtering Composite Creation & TOAR Modules
+var med = require('users/samapriya/modules:filters-composites');
+var med2=require('users/samapriya/modules:toar')
+
+//Importing Surface Reflectance Imagery 0-0.80 cloud cover
+var psr=ee.ImageCollection('projects/sat-io/planet-water/ps4b')
+//.merge(ee.ImageCollection('projects/sat-io/psr'))
+var filtered=ee.ImageCollection(psr).filterBounds(geometry)
+print("Number of Images in Geometry",filtered.size())
+
+//Setting up percentile composites
+var percps=med.percentilecomposite(15,filtered,['b1','b2','b3','b4'],'2017-03-01', 32, 14, 'day')
+print(percps)
+
+//Calculate NDWI
+var addNDWI = function(image) {
+  var ndwi = image.normalizedDifference(['b2', 'b4']).rename('NDWI');
+  return ndwi.set('month',ee.Date(image.get('system:time_start')).get('month'))
+  .set('day',ee.Date(image.get('system:time_start')).get('day'))
+  .set('year',ee.Date(image.get('system:time_start')).get('year'))
+  .set('system:time_start',image.get('system:time_start'))
+  .set('system:time_end',image.get('system:time_end'));
+};
+
+var ndwicoll=percps.map(addNDWI).sort('system:time_end')
+print(ndwicoll.sort('system:time_end'))
+
+//Add the composites to Map
+var coll=ee.ImageCollection(ndwicoll).sort('year').toList(32)
+var diff=ee.Image(coll.get(1)).select(['NDWI']).clip(geometry).subtract(ee.Image(coll.get(31)).select(['NDWI']).clip(geometry))
+Map.addLayer(diff.clip(geometry),vis,'Difference Imagery')
+
+
+//Function to convert image collection to a MutliBand Imagery
+function appendBand(current, previous){
+  // Build a name for the band
+  var bandName = ee.Algorithms.String(ee.String("NDWI_")
+  .cat(ee.String(ee.Date(current.get('system:time_end')).get('year'))).cat('-')
+  .cat(ee.String(ee.Date(current.get('system:time_end')).get('month'))).cat('-')
+  .cat(ee.String(ee.Date(current.get('system:time_end')).get('day'))))
+  // Rename the band
+  current = current.select([0],[bandName])
+  // Append it to the result (Note: only return current item on first element/iteration)
+  var accum = ee.Algorithms.If(ee.Algorithms.IsEqual(previous,null), current, current.addBands(ee.Image(previous)))
+  // Return the accumulation
+  return accum
+}
+
+var multiband=ndwicoll.sort('year').iterate(appendBand)
+print(multiband)
+Map.addLayer(ee.Image(multiband).clip(geometry),{"min":-0.2,"max":0.6},'MultiBand NDVI Biweekly')
+
+//Export Imagery
+Export.image.toDrive({
+  image:ee.Image(multiband),
+  description: "PS_Biweekly-NDWI-Image-Export",
+  folder: 'EE-Multisensor',
+  scale:3,
+  region: geometry,
+  maxPixels:10e12
+})
+
+for (var i=0;i<ee.Image(multiband).bandNames().size().getInfo();i++){
+  var bands=ee.Image(multiband).bandNames().get(i)
+  Map.addLayer(ee.Image(multiband).select([bands]).clip(geometry), {"min":-0.5,"max":0.5},bands.getInfo(),false);
+
+}
+
+Map.setOptions("TERRAIN")

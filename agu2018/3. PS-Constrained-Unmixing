@@ -1,0 +1,68 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var water = /* color: #d63000 */ee.Geometry.Polygon(
+        [[[-121.99059232802153, 37.44599980248035],
+          [-121.99969038100005, 37.44886176542116],
+          [-122.00011953444243, 37.44347845870339],
+          [-121.99385389418364, 37.441979241042255]]]),
+    vegetation = /* color: #98ff00 */ee.Geometry.Polygon(
+        [[[-122.03077295719982, 37.468829450768425],
+          [-122.0407293170631, 37.46862508305191],
+          [-122.04270342289806, 37.46569575105253],
+          [-122.03824022709728, 37.463447581207184]]]),
+    bare = /* color: #0b4a8b */ee.Geometry.Polygon(
+        [[[-121.95399740635753, 37.50637775311597],
+          [-121.95455530583263, 37.50324562805853],
+          [-121.95348242222667, 37.503075400105764],
+          [-121.95176580845714, 37.50637775311597]]]),
+    vis = {"opacity":1,"bands":["b4","b3","b2"],"min":583.3333333333334,"max":4877.375,"gamma":1.5850000000000002};
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// The purpose of this script is to estimate sub-pixel fractions
+// of identifiable spectral "endmembers". Constrained Spectral Unmixing is then applied
+
+// Use the reflective bands for the analysis
+var bands = ['b1', 'b2', 'b3', 'b4'];
+var aoi=ee.FeatureCollection("projects/sat-io/open-ca/aoi")
+
+//Center on AOI
+Map.centerObject(aoi,14)
+
+// Load PlanetScope surface reflectance data
+var psr = ee.ImageCollection('projects/sat-io/open-ca/ps4bsr');
+
+// Map the function over one year of data and take the median.
+var image = psr.filterDate('2018-01-01', '2018-12-31')
+                    .median()
+                    .select(bands).clip(aoi);
+
+// Display the results.
+Map.addLayer(image, vis, 'FCC Overall Median');
+
+
+// Get the mean spectrum in each of the endmember polygons.
+var bareMean = image.reduceRegion(ee.Reducer.mean(), bare, 3).values();
+var waterMean = image.reduceRegion(ee.Reducer.mean(), water, 3).values();
+var vegMean = image.reduceRegion(ee.Reducer.mean(), vegetation, 3).values();
+
+// Optional: plot the endmembers
+var chart = ui.Chart.image.regions({
+  image: image, 
+  regions: ee.FeatureCollection([
+    ee.Feature(bare, {label: 'bare'}),
+    ee.Feature(vegetation, {label: 'vegetation'}),
+    ee.Feature(water, {label: 'water'})
+  ]), 
+  reducer: ee.Reducer.mean(), 
+  scale: 3, 
+  seriesProperty: 'label', 
+}).setOptions({
+  series: {
+    0: { color: 'red' },
+    1: { color: 'green' },
+    2: { color: 'blue' }
+  }
+});
+print(chart);
+
+// Constrained:
+var constrained = image.unmix([bareMean, vegMean, waterMean], true, true).rename(['bare','vegetation','water']);
+Map.addLayer(constrained, {}, 'constrained fractions');

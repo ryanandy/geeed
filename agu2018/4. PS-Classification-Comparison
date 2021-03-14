@@ -1,0 +1,217 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var urban = /* color: #98ff00 */ee.FeatureCollection(
+        [ee.Feature(
+            ee.Geometry.Point([-121.94579849202643, 37.477124013802474]),
+            {
+              "landcover": 0,
+              "system:index": "0"
+            }),
+        ee.Feature(
+            ee.Geometry.Point([-121.94309482533941, 37.47852035660752]),
+            {
+              "landcover": 0,
+              "system:index": "1"
+            }),
+        ee.Feature(
+            ee.Geometry.Point([-121.94283733327399, 37.476510977012175]),
+            {
+              "landcover": 0,
+              "system:index": "2"
+            }),
+        ee.Feature(
+            ee.Geometry.Point([-121.94322357137213, 37.47565952868312]),
+            {
+              "landcover": 0,
+              "system:index": "3"
+            }),
+        ee.Feature(
+            ee.Geometry.Point([-121.94373855550299, 37.474263132423715]),
+            {
+              "landcover": 0,
+              "system:index": "4"
+            }),
+        ee.Feature(
+            ee.Geometry.Point([-121.94764385182867, 37.47845224292964]),
+            {
+              "landcover": 0,
+              "system:index": "5"
+            }),
+        ee.Feature(
+            ee.Geometry.Point([-121.94695720632086, 37.47865658377693]),
+            {
+              "landcover": 0,
+              "system:index": "6"
+            })]),
+    vegetation = /* color: #d63000 */ee.FeatureCollection(
+        [ee.Feature(
+            ee.Geometry.Point([-122.00060707902196, 37.476414643078414]),
+            {
+              "landcover": 1,
+              "system:index": "0"
+            }),
+        ee.Feature(
+            ee.Geometry.Point([-122.0026670155454, 37.47559725181513]),
+            {
+              "landcover": 1,
+              "system:index": "1"
+            }),
+        ee.Feature(
+            ee.Geometry.Point([-121.98704583024266, 37.47110144006563]),
+            {
+              "landcover": 1,
+              "system:index": "2"
+            }),
+        ee.Feature(
+            ee.Geometry.Point([-121.97794777726415, 37.47600594856429]),
+            {
+              "landcover": 1,
+              "system:index": "3"
+            }),
+        ee.Feature(
+            ee.Geometry.Point([-121.94888839681158, 37.47548923785323]),
+            {
+              "landcover": 1,
+              "system:index": "4"
+            }),
+        ee.Feature(
+            ee.Geometry.Point([-121.95039043385992, 37.47644286150284]),
+            {
+              "landcover": 1,
+              "system:index": "5"
+            })]),
+    water = /* color: #0b4a8b */ee.FeatureCollection(
+        [ee.Feature(
+            ee.Geometry.Point([-122.04651170177351, 37.4629086265191]),
+            {
+              "landcover": 2,
+              "system:index": "0"
+            }),
+        ee.Feature(
+            ee.Geometry.Point([-122.04745583934675, 37.46038785267907]),
+            {
+              "landcover": 2,
+              "system:index": "1"
+            }),
+        ee.Feature(
+            ee.Geometry.Point([-122.05320649547468, 37.46147792747099]),
+            {
+              "landcover": 2,
+              "system:index": "2"
+            }),
+        ee.Feature(
+            ee.Geometry.Point([-122.05148988170515, 37.458412051615]),
+            {
+              "landcover": 2,
+              "system:index": "3"
+            }),
+        ee.Feature(
+            ee.Geometry.Point([-122.04539590282332, 37.45895710539863]),
+            {
+              "landcover": 2,
+              "system:index": "4"
+            }),
+        ee.Feature(
+            ee.Geometry.Point([-122.03878693981062, 37.459842809323916]),
+            {
+              "landcover": 2,
+              "system:index": "5"
+            }),
+        ee.Feature(
+            ee.Geometry.Point([-122.03295045299421, 37.46215921614617]),
+            {
+              "landcover": 2,
+              "system:index": "6"
+            }),
+        ee.Feature(
+            ee.Geometry.Point([-122.02119164867293, 37.46495243481373]),
+            {
+              "landcover": 2,
+              "system:index": "7"
+            }),
+        ee.Feature(
+            ee.Geometry.Point([-122.0114069501866, 37.46699618723866]),
+            {
+              "landcover": 2,
+              "system:index": "8"
+            })]);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+/*
+Compare Multiple Classification Techniques from Nick Clinton 2018
+*/
+// Use the reflective bands
+var bands = ['b1', 'b2', 'b3', 'b4'];
+var aoi=ee.FeatureCollection("projects/sat-io/open-ca/aoi")
+
+var psr = ee.ImageCollection('projects/sat-io/open-ca/ps4bsr');
+
+// Map the function over one year of data and take the median.
+var image = psr.filterDate('2018-01-01', '2018-12-31')
+                    .median()
+                    .select(bands).clip(aoi);
+
+var newfc = urban.merge(vegetation).merge(water);
+// print(newfc);
+Map.centerObject(newfc);
+
+print(newfc)
+
+var training = image.select(bands).sampleRegions({
+  collection: newfc, 
+  properties: ['landcover'], 
+  scale: 3
+});
+// print(training)
+
+var classifier = ee.Classifier.cart().train({
+  features: training, 
+  classProperty: 'landcover', 
+  inputProperties: bands
+});
+print(classifier.explain());
+
+var classified = image.select(bands).classify(classifier);
+Map.addLayer(classified, {min: 0, max: 2, palette: ['red', 'green', 'blue']}, 'cart');
+
+var classifier2 = ee.Classifier.naiveBayes().train({
+  features: training, 
+  classProperty: 'landcover', 
+  inputProperties: bands,
+});
+
+var classifier3 = ee.Classifier.gmoMaxEnt().train({
+  features: training, 
+  classProperty: 'landcover', 
+  inputProperties: bands,
+});
+
+var classified1 = image.classify(classifier);
+var classified2 = image.classify(classifier2);
+var classified3 = image.classify(classifier3);
+
+var mode = classified1.addBands(classified2).addBands(classified3)
+    .reduce(ee.Reducer.mode());
+Map.addLayer(mode, {min: 0, max: 2, palette: ['red', 'green', 'blue']}, 'mode');
+
+Map.addLayer(classified1, {min: 0, max: 2, palette: ['red', 'green', 'blue']}, 'Random Forest');
+
+// ACCURACY ASSESSMENT:
+var withRandom = training.randomColumn();
+// print(withRandom);
+
+// Approximately 70% of our training data
+var trainingPartition = withRandom.filter(ee.Filter.lt('random', 0.7));
+// Approximately 30% of our training data
+var testingPartition = withRandom.filter(ee.Filter.gte('random', 0.7));
+
+// Trained with 70% of our data.
+var trainedClassifier = ee.Classifier.gmoMaxEnt().train({
+  features: trainingPartition, 
+  classProperty: 'landcover', 
+  inputProperties: bands
+});
+
+var test = testingPartition.classify(trainedClassifier);
+// print(test);
+
+var confusionMatrix = test.errorMatrix('landcover', 'classification');
+print(confusionMatrix);

@@ -1,0 +1,73 @@
+//Import Palette module
+var palettes = require('users/gena/packages:palettes')
+
+// The purpose of this script is to create a monthly median image composite to derive NDVI
+var aoi=ee.FeatureCollection("projects/sat-io/open-ca/aoi")
+var psr = ee.ImageCollection('projects/sat-io/open-ca/ps4bsr');
+
+//We choose 11 months of data that was ingested (Remember we have barely started December)
+var months = ee.List.sequence(1, 11)
+
+var monthlyndvi = ee.ImageCollection(months
+  .map(function(m) {
+    var start = ee.Date.fromYMD(2018, m, 1)
+    var end = start.advance(1, 'month');
+    var image = psr.filterDate(start, end).median().clip(aoi);
+    var ndvi=image.normalizedDifference(['b4', 'b3']).rename('NDVI')
+    return ndvi.set('month', m).set('system:time_start',start).set('system:time_end',end)
+}))
+
+print('Per Month NDVI Collection',monthlyndvi);
+//Map.addLayer(monthlyndvi.first(),{palette:palettes.colorbrewer.RdYlGn[9]}, 'Jan-Feb 2018')
+
+var multiband = ee.Image().select()
+var multiband = ee.Image(monthlyndvi.iterate(function(image, result) {
+   return ee.Image(result).addBands(image)
+}, multiband))
+
+print('MultiBand NDVI Image',multiband)
+
+// A helper function to show the image for a given month on the default map.
+var showLayer = function(month) {
+  Map.layers().reset();
+  var date = ee.Date.fromYMD(2018, month, 1);
+  var dateRange = ee.DateRange(date, date.advance(1, 'month'));
+  var image = monthlyndvi.filterDate(dateRange).first();
+  Map.addLayer({
+    eeObject: ee.Image(image),
+    visParams: {
+      min: -1,
+      max: 1,
+      palette:palettes.colorbrewer.RdYlGn[9]
+    },
+    name: String(month)
+  });
+  Map.addLayer(multiband,{min:-1,max:1}, 'MultiBand NDVI',false)
+};
+
+// Create a label and slider.
+var label = ui.Label('NDVI for Month');
+var slider = ui.Slider({
+  min: 1,
+  max: 11,
+  step: 1,
+  onChange: showLayer,
+  style: {stretch: 'horizontal'}
+});
+
+// Create a panel that contains both the slider and the label.
+var panel = ui.Panel({
+  widgets: [label, slider],
+  layout: ui.Panel.Layout.flow('vertical'),
+  style: {
+    position: 'top-center',
+    padding: '7px'
+  }
+});
+
+// Add the panel to the map.
+Map.add(panel);
+
+// Set default values on the slider and map.
+slider.setValue(7);
+Map.setCenter(-122.0363, 37.4676, 13);
