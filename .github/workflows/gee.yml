@@ -28,9 +28,6 @@ jobs:
             do
               if [ -d "$val" ]; then rm -Rf $val; fi
               git clone "https://earthengine.googlesource.com/users/sat-io/$val" && rm -rf $val/.git
-              cd $val
-              ls -l -a
-              cd $cwd
             done
           cd $cwd
           ls -l -a
