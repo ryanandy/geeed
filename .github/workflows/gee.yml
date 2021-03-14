@@ -8,6 +8,8 @@ jobs:
     steps:
       - name: Checkout master
         uses: actions/checkout@v1
+        with:
+          ref: main
       - name: auther
         run: |
           eval 'set +o history' 2>/dev/null || setopt HIST_IGNORE_SPACE 2>/dev/null
