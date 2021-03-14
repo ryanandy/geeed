@@ -19,7 +19,6 @@ jobs:
           __END__
           eval 'set -o history' 2>/dev/null || unsetopt HIST_IGNORE_SPACE 2>/dev/null
       - name: commit files
-        continue-on-error: true
         run: |
           cwd=$(pwd)
           RepoArray=("terra2018" "agu2018" "Dam" "default")
@@ -28,17 +27,10 @@ jobs:
           for val in ${RepoArray[*]}
             do
               if [ -d "$val" ]; then rm -Rf $val; fi
-              git clone "https://earthengine.googlesource.com/users/sat-io/$val"
+              git clone "https://earthengine.googlesource.com/users/sat-io/$val" && rm -rf $val/.git
               cd $val
-              rm -r .git
-              pwd
               ls -l -a
-              cd
+              cd $cwd
             done
           cd $cwd
           ls -l -a
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add -A
-          git commit -m "updated datasets ${today}"
-          git push --force
