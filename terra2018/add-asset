@@ -8,3 +8,5 @@ var table = ee.FeatureCollection("projects/sat-io/terra2018/vector/aoi"),
 Map.centerObject(table,14)
 Map.addLayer(imageCollection2.median(),psvis,'PlanetScope')
 Map.addLayer(imageCollection.median(),revis,'RapidEye')
+
+print('hello world')
