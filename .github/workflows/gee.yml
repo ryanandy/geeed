@@ -18,7 +18,7 @@ jobs:
           ${{secrets.EECRED}}
           __END__
           eval 'set -o history' 2>/dev/null || unsetopt HIST_IGNORE_SPACE 2>/dev/null
-      - name: commit files
+      - name: clone repos
         run: |
           cwd=$(pwd)
           RepoArray=("terra2018" "agu2018" "Dam" "default")
@@ -31,3 +31,9 @@ jobs:
             done
           cd $cwd
           ls -R -l -a
+      - name: commit
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add -A
+          git commit -m "updated datasets ${today}"
