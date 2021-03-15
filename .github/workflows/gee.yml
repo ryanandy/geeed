@@ -41,14 +41,10 @@ jobs:
       - name: commit
         continue-on-error: true
         run: |
-              git config --local user.email "action@github.com"
-              git config --local user.name "GitHub Action"
-              git add -A
-              if git diff-index --quiet HEAD; then
-                git commit -m "updated datasets ${today}"
-              else
-                echo "There are no new changes"
-              fi
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add -A
+            git commit -m "updated datasets ${today}"
       - name: push changes
         uses: ad-m/github-push-action@v0.6.0
         continue-on-error: true
