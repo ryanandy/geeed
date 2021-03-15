@@ -48,6 +48,7 @@ jobs:
                 git commit -m "updated datasets ${today}"
               else
                 echo "There are no new changes"
+              fi
       - name: push changes
         uses: ad-m/github-push-action@v0.6.0
         continue-on-error: true
