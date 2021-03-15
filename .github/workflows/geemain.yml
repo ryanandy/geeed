@@ -45,9 +45,13 @@ jobs:
               ls -l -a
               git config --local user.email "action@github.com"
               git config --local user.name "GitHub Action"
-              git add -A || continue
-              git commit -m "updated datasets ${today}" || continue
-              git push origin master --force || continue
+              git add -A
+              if git diff --quiet; then
+                echo "there are no changes"
+              else
+                git commit -m "updated datasets ${today}"
+                git push origin master --force
+              fi
               cd ..
               echo "switch dirc"
               ls -l -a
