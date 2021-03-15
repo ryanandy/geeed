@@ -1,4 +1,4 @@
-//Add AOI and add Image Collection
+//Add AOI and add Image Collection to the script
 var collection=ee.ImageCollection('projects/sat-io/open-ca/ps4bsr')
 var aoi=ee.FeatureCollection("projects/sat-io/open-ca/aoi")
 
