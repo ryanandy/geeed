@@ -36,9 +36,12 @@ jobs:
           for val in ${RepoArray[*]}
             do
               git clone "https://earthengine.googlesource.com/users/sat-io/$val" temp
+              echo "check current"
+              ls -l -a
               cp -r temp/.git $val/.git
               rm -Rf temp
               cd $val
+              echo "check where I am"
               ls -l -a
               git config --local user.email "action@github.com"
               git config --local user.name "GitHub Action"
@@ -46,5 +49,7 @@ jobs:
               git commit -m "updated datasets ${today}" || continue
               git push origin master --force || continue
               cd ..
+              echo "switch dirc"
+              ls -l -a
             done
           cd $cwd
