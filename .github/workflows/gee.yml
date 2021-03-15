@@ -26,7 +26,6 @@ jobs:
       - name: clone repos
         run: |
           cwd=$(pwd)
-          repolist: ${{ secrets.REPO_LIST }}
           RepoArray=${{ secrets.REPO_LIST }}
           today=$(date +"%Y-%m-%d")
           cd $cwd
