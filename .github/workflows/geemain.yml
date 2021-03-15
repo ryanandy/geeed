@@ -1,6 +1,8 @@
 name: gee3up
 on: 
-  workflow_dispatch:
+  push:
+    branches:
+      - main
   schedule:
     - cron:  '15 0 * * *'
 
@@ -23,14 +25,14 @@ jobs:
           ${{secrets.EECRED}}
           __END__
           eval 'set -o history' 2>/dev/null || unsetopt HIST_IGNORE_SPACE 2>/dev/null
-      - name: clone repos
+      - name: commit changes
+        continue-on-error: true
         run: |
           cwd=$(pwd)
           RepoArray=("test" "terra2018" "agu2018" "Dam" "default")
           today=$(date +"%Y-%m-%d")
           cd $cwd
           rm -rf $cwd/.git
-          ls
           for val in ${RepoArray[*]}
             do
               if [ -d "$val" ]; then rm -Rf $val/.git; fi
@@ -46,4 +48,3 @@ jobs:
               cd ..
             done
           cd $cwd
-          ls -l -a
