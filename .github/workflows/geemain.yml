@@ -37,16 +37,16 @@ jobs:
             do
               git clone "https://earthengine.googlesource.com/users/sat-io/$val" temp
               echo "check current"
-              ls -l -a
+              pwd
               cp -r temp/.git $val/.git
               rm -Rf temp
               cd $val
-              echo "check where I am"
-              ls -l -a
+              echo "check where I am before commit"
+              pwd
               git config --local user.email "action@github.com"
               git config --local user.name "GitHub Action"
               git add -A
-              if git diff --quiet; then
+              if git diff-index --quiet HEAD; then
                 echo "there are no changes"
               else
                 git commit -m "updated datasets ${today}"
