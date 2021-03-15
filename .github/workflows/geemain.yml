@@ -38,7 +38,8 @@ jobs:
               git clone "https://earthengine.googlesource.com/users/sat-io/$val" temp
               echo "check current"
               pwd
-              cp -r temp/.git $val/.git
+              git diff-index --quiet HEAD;
+              cp -u temp $val
               rm -Rf temp
               cd $val
               echo "check where I am before commit"
