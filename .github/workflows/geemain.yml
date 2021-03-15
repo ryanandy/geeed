@@ -35,11 +35,9 @@ jobs:
           rm -rf $cwd/.git
           for val in ${RepoArray[*]}
             do
-              if [ -d "$val" ]; then rm -Rf $val; fi
-              mkdir "$val_temp"
-              git clone "https://earthengine.googlesource.com/users/sat-io/$val" $val_temp
-              cp -r $val_temp/.git $val/.git
-              rm -Rf $val_temp
+              git clone "https://earthengine.googlesource.com/users/sat-io/$val" temp
+              cp -r temp/.git $val/.git
+              rm -Rf temp
               cd $val
               git config --local user.email "action@github.com"
               git config --local user.name "GitHub Action"
