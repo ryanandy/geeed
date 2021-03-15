@@ -46,9 +46,3 @@ jobs:
             done
           cd $cwd
           ls -R -l -a
-      - name: push changes
-        uses: ad-m/github-push-action@v0.6.0
-        continue-on-error: true
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: main
