@@ -27,7 +27,7 @@ jobs:
         run: |
           cwd=$(pwd)
           repolist: ${{ secrets.REPO_LIST }}
-          RepoArray=(repolist)
+          RepoArray=${{ secrets.REPO_LIST }}
           today=$(date +"%Y-%m-%d")
           cd $cwd
           ls -R -l -a
