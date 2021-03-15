@@ -1,4 +1,4 @@
-name: gee3
+name: gee3up
 on: 
   workflow_dispatch:
   schedule:
