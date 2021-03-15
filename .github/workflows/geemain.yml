@@ -42,9 +42,9 @@ jobs:
               ls -l -a
               git config --local user.email "action@github.com"
               git config --local user.name "GitHub Action"
-              git add -A
-              git commit -m "updated datasets ${today}"
-              git push origin master --force
+              git add -A || continue
+              git commit -m "updated datasets ${today}" || continue
+              git push origin master --force || continue
               cd ..
             done
           cd $cwd
