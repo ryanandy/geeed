@@ -29,7 +29,8 @@ jobs:
           RepoArray=("test" "terra2018" "agu2018" "Dam" "default")
           today=$(date +"%Y-%m-%d")
           cd $cwd
-          ls -R -l -a
+          rm -rf $cwd/.git
+          ls
           for val in ${RepoArray[*]}
             do
               if [ -d "$val" ]; then rm -Rf $val/.git; fi
@@ -45,4 +46,4 @@ jobs:
               cd ..
             done
           cd $cwd
-          ls -R -l -a
+          ls -l -a
