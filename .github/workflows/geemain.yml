@@ -35,7 +35,6 @@ jobs:
           rm -rf $cwd/.git
           for val in ${RepoArray[*]}
             do
-              if [ -d "$val" ]; then rm -Rf $val/.git; fi
               cd $val
               git init
               git add .
