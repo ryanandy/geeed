@@ -33,6 +33,7 @@ jobs:
           for val in ${RepoArray[*]}
             do
               if [ -d "$val" ]; then rm -Rf $val; fi
+              ls
               git clone "https://earthengine.googlesource.com/users/sat-io/$val" && rm -rf $val/.git
             done
           cd $cwd
