@@ -36,7 +36,6 @@ jobs:
           for val in ${RepoArray[*]}
             do
               cd $val
-              git init
               git config --local user.email "action@github.com"
               git config --local user.name "GitHub Action"
               git add -A
