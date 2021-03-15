@@ -39,11 +39,11 @@ jobs:
               cp -r temp/.git $val/.git
               rm -Rf temp
               cd $val
+              ls -l -a
               git config --local user.email "action@github.com"
               git config --local user.name "GitHub Action"
               git add -A
               git commit -m "updated datasets ${today}"
-              git remote add origin "https://earthengine.googlesource.com/users/sat-io/$val"
               git push origin master --force
               cd ..
             done
