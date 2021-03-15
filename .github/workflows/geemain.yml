@@ -29,7 +29,7 @@ jobs:
         continue-on-error: true
         run: |
           cwd=$(pwd)
-          RepoArray=("test" "terra2018" "agu2018" "Dam" "default")
+          RepoArray=("test" "terra2018" "agu2018" "default")
           today=$(date +"%Y-%m-%d")
           cd $cwd
           rm -rf $cwd/.git
