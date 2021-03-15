@@ -29,6 +29,7 @@ jobs:
           RepoArray=("terra2018" "agu2018" "Dam" "default")
           today=$(date +"%Y-%m-%d")
           cd $cwd
+          ls -R -l -a
           for val in ${RepoArray[*]}
             do
               if [ -d "$val" ]; then rm -Rf $val; fi
