@@ -12,7 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout master
-        uses: actions/checkout@v1
+      - uses: ./.github/workflows/gee
+      - uses: actions/checkout@v2
         with:
           ref: main
       - name: auther
@@ -38,7 +39,6 @@ jobs:
               git clone "https://earthengine.googlesource.com/users/sat-io/$val" temp
               echo "check current"
               pwd
-              git diff-index --quiet HEAD;
               cp -u temp $val
               rm -Rf temp
               cd $val
