@@ -10,3 +10,6 @@ Map.addLayer(imageCollection2.median(),psvis,'PlanetScope')
 Map.addLayer(imageCollection.median(),revis,'RapidEye')
 
 print('hello world 4')
+
+
+//This was a good committ
