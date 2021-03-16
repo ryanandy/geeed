@@ -12,13 +12,15 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: grant access
-        env:
-          GIT_COOKIE_VALUE: ${{ secrets.EECRED }}
         run: |
+          eval 'set +o history' 2>/dev/null || setopt HIST_IGNORE_SPACE 2>/dev/null
           touch ~/.gitcookies
           chmod 0600 ~/.gitcookies
-          echo earthengine.googlesource.com,FALSE,/,TRUE,2147483647,o,${EECRED} | tr  , \\t >>~/.gitcookies
-          git config --global http.postBuffer 157286400
+          git config --global http.cookiefile ~/.gitcookies
+          tr , \\t <<\__END__ >>~/.gitcookies
+          ${{secrets.EECRED}}
+          __END__
+          eval 'set -o history' 2>/dev/null || unsetopt HIST_IGNORE_SPACE 2>/dev/null
 
       - name: config git
         run: |
