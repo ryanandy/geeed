@@ -26,7 +26,7 @@ jobs:
       - name: clone repos
         run: |
           cwd=$(pwd)
-          RepoArray=("nclinton/EE102")
+          RepoArray=("nclinton/ICIMOD2017-training")
           today=$(date +"%Y-%m-%d")
           cd $cwd
           ls -R -l -a
