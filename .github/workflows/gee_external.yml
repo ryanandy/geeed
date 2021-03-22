@@ -26,7 +26,7 @@ jobs:
       - name: clone repos
         run: |
           cwd=$(pwd)
-          RepoArray=("gorelick/EE-JRC-201" "lks/ee-103")
+          RepoArray=("nclinton/EE102")
           today=$(date +"%Y-%m-%d")
           cd $cwd
           ls -R -l -a
@@ -34,7 +34,8 @@ jobs:
             do
               echo $val
               if [ -d "$val" ]; then rm -Rf $val; fi
-              git clone "https://earthengine.googlesource.com/users/$val" && rm -rf $val/.git
+              rep="$(echo $val | cut -d'/' -f2)"
+              git clone "https://earthengine.googlesource.com/users/$val" && rm -rf $rep/.git
             done
           cd $cwd
       - name: commit
