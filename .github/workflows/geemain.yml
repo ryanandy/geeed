@@ -1,5 +1,6 @@
 name: gee3up
-on: 
+on:
+  workflow_dispatch:
   schedule:
     - cron:  '15 0 * * *'
 
