@@ -1,0 +1,53 @@
+name: gee3_read_write
+on: 
+  workflow_dispatch:
+  schedule:
+    - cron:  '15 0 * * *'
+
+jobs:
+  build:
+    name: Deploy docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@v1
+        with:
+          ref: main
+      - name: auther
+        run: |
+          eval 'set +o history' 2>/dev/null || setopt HIST_IGNORE_SPACE 2>/dev/null
+          touch ~/.gitcookies
+          chmod 0600 ~/.gitcookies
+          git config --global http.cookiefile ~/.gitcookies
+          tr , \\t <<\__END__ >>~/.gitcookies
+          ${{secrets.EECRED}}
+          __END__
+          eval 'set -o history' 2>/dev/null || unsetopt HIST_IGNORE_SPACE 2>/dev/null
+      - name: clone repos
+        run: |
+          cwd=$(pwd)
+          RepoArray=("gorelick/EE-JRC-201" "lks/ee-103")
+          today=$(date +"%Y-%m-%d")
+          cd $cwd
+          ls -R -l -a
+          for val in ${RepoArray[*]}
+            do
+              echo $val
+              if [ -d "$val" ]; then rm -Rf $val; fi
+              git clone "https://earthengine.googlesource.com/users/$val" && rm -rf $val/.git
+            done
+          cd $cwd
+      - name: commit
+        continue-on-error: true
+        run: |
+            today=$(date +"%Y-%m-%d")
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add -A
+            git commit -m "updated datasets ${today}"
+      - name: push changes
+        uses: ad-m/github-push-action@v0.6.0
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: main
