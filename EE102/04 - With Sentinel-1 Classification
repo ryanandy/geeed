@@ -1,0 +1,178 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var cdl = ee.ImageCollection("USDA/NASS/CDL"),
+    geometry = /* color: #d63000 */ee.Geometry.MultiPolygon(
+        [[[[-121.92626953125, 38.57823196583313],
+           [-121.63787841796875, 38.642617906345265],
+           [-121.63238525390625, 38.99570671505043],
+           [-121.96197509765625, 39.02771884021161]]],
+         [[[-121.59393310546875, 38.19502155795575],
+           [-121.58843994140625, 37.931200459333716],
+           [-121.409912109375, 37.95286091815649],
+           [-121.4813232421875, 38.16911413556086]]],
+         [[[-120.750732421875, 37.09900294387622],
+           [-120.63262939453125, 36.91915611148194],
+           [-120.49530029296875, 36.97622678464096],
+           [-120.6573486328125, 37.10995544464346]]]]);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// Load Sentinel-2 TOA reflectance data.
+var s2 = ee.ImageCollection('COPERNICUS/S2');
+
+// Function to mask clouds using the Sentinel-2 QA band.
+function maskS2clouds(image) {
+  var qa = image.select('QA60');
+
+  // Bits 10 and 11 are clouds and cirrus, respectively.
+  var cloudBitMask = ee.Number(2).pow(10).int();
+  var cirrusBitMask = ee.Number(2).pow(11).int();
+
+  // Both flags should be set to zero, indicating clear conditions.
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(
+             qa.bitwiseAnd(cirrusBitMask).eq(0));
+
+  // Return the masked and scaled data.
+  return image.updateMask(mask).divide(10000)
+      .copyProperties(image, ['system:time_start']);
+}
+
+// Map the cloud masking function over one year of data
+var s2filtered = s2.filterDate('2016-01-01', '2016-12-31')
+                  // Pre-filter to get less cloudy granules.
+                  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20))
+                  .map(maskS2clouds)
+                  .select('B.*');
+
+var composite = s2filtered.median();
+// Display the results.
+Map.addLayer(composite, {bands: ['B3', 'B2', 'B1'], min: 0, max: 0.3}, 'composite', false);
+
+
+var months = ee.List.sequence(1, 12, 3);
+
+var compositesS2 = months.map(function(m) {
+  return s2filtered.filter(ee.Filter.calendarRange({
+    start: m, 
+    end: ee.Number(m).add(2), 
+    field: 'month'
+  })).median();
+});
+var check = ee.Image(compositesS2.get(0));
+// Map.addLayer(check, {}, 'check');
+
+var mergeBands = function(previous, image) {
+  return ee.Image(previous).addBands(image);
+};
+
+composite = ee.Image(compositesS2.iterate(mergeBands, ee.Image([])));
+
+
+// Load the Sentinel-1 ImageCollection.
+var sentinel1 = ee.ImageCollection('COPERNICUS/S1_GRD');
+
+// Filter by metadata properties.
+var s1filtered = sentinel1
+  .filterDate('2016-01-01', '2016-12-31')
+  // Filter to get images with VV and VH dual polarization.
+  .filter(ee.Filter.listContains('transmitterReceiverPolarisation', 'VV'))
+  .filter(ee.Filter.listContains('transmitterReceiverPolarisation', 'VH'))
+  // Filter to get images collected in interferometric wide swath mode.
+  .filter(ee.Filter.eq('instrumentMode', 'IW'))
+  .filter(ee.Filter.eq('orbitProperties_pass', 'ASCENDING'))
+  .select('V.*');
+
+var s1months = ee.List.sequence(1, 12, 6);
+
+var compositesS1 = s1months.map(function(m) {
+  return s1filtered.filter(ee.Filter.calendarRange({
+    start: m, 
+    end: ee.Number(m).add(5), 
+    field: 'month'
+  })).mean();
+});
+
+composite = ee.Image(compositesS2.cat(compositesS1).iterate(mergeBands, ee.Image([])));
+
+
+// Load the CDL image for 2016.  This is the training data.
+var cdl2016 = ee.Image(cdl.filterDate('2016-01-01', '2016-12-13').first());
+
+// We only want the first few crop types.
+cdl2016 = cdl2016.select('cropland');
+cdl2016 = cdl2016.updateMask(cdl2016.lte(6));
+Map.addLayer(cdl2016, {}, 'cdl2016');
+
+// Take a stratified sample.
+var sample = cdl2016.addBands(composite).stratifiedSample({
+  numPoints: 1000, 
+  classBand: 'cropland', 
+  region: geometry, 
+  scale: 10, 
+  seed: 1,
+  tileScale: 8
+});
+
+var histogram = sample.reduceColumns({
+  reducer: ee.Reducer.frequencyHistogram(), 
+  selectors: ['cropland']
+});
+// print(histogram); // OK
+
+
+// Partition the training.
+sample = sample.randomColumn({ seed: 1 });
+var training = sample.filter(ee.Filter.lt('random', 0.7));
+var validation = sample.filter(ee.Filter.gte('random', 0.7));
+
+var classifier = ee.Classifier.randomForest(40)
+    .train({
+      features: training, 
+      classProperty: 'cropland', 
+      inputProperties: composite.bandNames()
+    });
+
+var classified = composite.classify(classifier);
+Map.addLayer(classified, {min: 0, max: 6}, 'classified');
+
+var trainAccuracy = classifier.confusionMatrix().accuracy();
+// print('trainAccuracy', trainAccuracy); // 0.9701408450704225
+// After parameter tuning.
+// print('trainAccuracy', trainAccuracy); // 0.9923534409515717
+// After adding multitemporal data:
+// print('trainAccuracy', trainAccuracy); // 0.9968418030433535
+// With Sentinel-1 data:
+print('trainAccuracy', trainAccuracy); // 0.9963266459451823
+
+var testAccuracy = validation
+    .classify(classifier)
+    .errorMatrix('cropland', 'classification')
+    .accuracy();
+// print('testAccuracy', testAccuracy); // 0.8068965517241379
+// After parameter tuning:
+// print('testAccuracy', testAccuracy); // 0.8373042886317222
+// After adding multitemporal data:
+// print('testAccuracy', testAccuracy); // 0.918918918918919
+// With Sentinel-1 data:
+print('testAccuracy', testAccuracy); // 0.9383983572895277
+
+// Parameter tuning.
+var numTrees = ee.List.sequence(5, 50, 5);
+
+var accuracies = numTrees.map(function(t) {
+  var classifier = ee.Classifier.randomForest(t)
+    .train({
+      features: training, 
+      classProperty: 'cropland', 
+      inputProperties: composite.bandNames()
+    });
+  return validation
+    .classify(classifier)
+    .errorMatrix('cropland', 'classification')
+    .accuracy();
+});
+
+// print(ui.Chart.array.values({
+//   array: ee.Array(accuracies), 
+//   axis: 0, 
+//   xLabels: numTrees
+// })); // OK
+
+
