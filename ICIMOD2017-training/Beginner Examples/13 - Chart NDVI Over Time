@@ -1,0 +1,15 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var L8 = ee.ImageCollection("LANDSAT/LC8_L1T_TOA"),
+    roi = /* color: 00ff00 */ee.Geometry.Point([-122.10067749023438, 37.43615762405059]);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+var rgb_vis = {min:0, max:0.3, bands:['B4','B3','B2']};
+function addNDVI(image) {
+  var ndvi = image.normalizedDifference(['B5', 'B4']);
+  return image.addBands(ndvi);
+}
+var filtered = L8.filterDate('2015-01-01', '2015-10-30');
+var with_ndvi = filtered.map(addNDVI);
+var greenest = with_ndvi.qualityMosaic('nd');
+Map.addLayer(filtered.median(), rgb_vis, 'RGB (median)');
+Map.addLayer(greenest, rgb_vis, 'RGB (greenest pixel)');
+print(Chart.image.series(with_ndvi.select('nd'), roi));

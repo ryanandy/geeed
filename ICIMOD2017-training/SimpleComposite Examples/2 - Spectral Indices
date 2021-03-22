@@ -1,0 +1,34 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geometry = /* color: #98ff00 */ee.Geometry.Point([85.32766113281264, 27.70294105837698]);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+var landsat = ee.ImageCollection("LANDSAT/LC8_L1T")
+    .filterDate('2016-01-01', '2017-01-01')
+    .filterBounds(geometry)
+
+var composite = ee.Algorithms.Landsat.simpleComposite({
+  collection: landsat,
+  asFloat: true
+})
+print(composite);
+
+var ndvi = composite.normalizedDifference(["B5", "B4"])
+Map.addLayer(ndvi, {min:0, max:1} , "NDVI")
+
+Map.centerObject(geometry, 11);
+
+var ndwi = composite.normalizedDifference(["B3", "B5"]);
+Map.addLayer(ndwi, {min:-1, max:0} , "NDWI");
+
+var nBRT = composite.expression({
+  expression: '(nir - 0.0001 * swir * thermal) / ' +
+              '(nir + 0.0001 * swir * thermal)', 
+  map: {
+    nir: composite.select('B5'),
+    swir: composite.select('B7'),
+    thermal: composite.select('B11')
+  }
+});
+Map.addLayer(nBRT, {min: 0.9, max: 1} , "nBRT");
+
+// var ndsi = composite.normalizedDifference(["B3", "B6"]);
+// Map.addLayer(ndsi, {min:-1, max:1} , "NDSI");

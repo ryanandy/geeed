@@ -1,0 +1,12 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var srtm = ee.Image("USGS/SRTMGL1_003"),
+    geometry = /* color: ffc82d */ee.Geometry.Polygon(
+        [[[-112.17864990234375, 36.12345548205636],
+          [-112.2747802734375, 36.02466804934359],
+          [-112.14019775390625, 36.00911716117325]]]);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+var slope = ee.Terrain.slope(srtm);
+Map.addLayer(srtm, {min:0, max:3000}, 'DEM');
+Map.addLayer(slope, {min:0, max:60}, 'slope');
+
+print(srtm.reduceRegion('mean', geometry));

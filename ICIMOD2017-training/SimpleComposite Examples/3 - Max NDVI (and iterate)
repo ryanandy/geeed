@@ -1,0 +1,36 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geometry = /* color: #98ff00 */ee.Geometry.Point([85.36744365692141, 27.70795640826932]);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+var landsat = ee.ImageCollection("LANDSAT/LC8_L1T_TOA")
+    // .filterDate('2016-01-01', '2017-01-01')
+    .filterBounds(geometry)
+print(landsat)
+    
+var ndvi = landsat.map(function(image) {
+  var cloud = ee.Algorithms.Landsat.simpleCloudScore(image).select('cloud');
+  var mask = cloud.lt(10);
+  
+  var result = image.normalizedDifference(["B5", "B4"]).rename("ndvi");
+  return image.addBands(result).updateMask(mask);
+});
+
+var maxNDVI = ndvi.max();
+Map.addLayer(maxNDVI, {bands: "ndvi", min:0, max:1}, "NDVI")
+Map.centerObject(geometry, 11)
+
+// A chart of NDVI over time.
+print(ui.Chart.image.series(ndvi.select('ndvi'), geometry, ee.Reducer.mean(), 30))
+
+// Assignment:
+// 1. Make a chart of NDVI over time for the full Landsat 8 data record
+// 2. Introduce a cloud masking function to clean up the long time series.
+
+
+// This is in response to the question about exporting a time series
+// of a single band.  It will have an empty band in the beginning.
+var oneImage = ndvi.iterate(function(image, previous) {
+  return ee.Image(previous).addBands(
+    image.select(['ndvi'], [image.date().format('YYYY-DD')]));
+}, ee.Image().select());
+print(oneImage);
+
